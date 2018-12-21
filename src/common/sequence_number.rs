@@ -3,7 +3,6 @@ use crate::message::Validity;
 use std::cmp::Ordering;
 use std::ops::Add;
 use std::ops::Sub;
-use std::{cmp, fmt};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Readable, Writable)]
 pub struct SequenceNumber_t {
@@ -294,30 +293,6 @@ mod tests {
         SEQUENCENUMBER_UNKNOWN,
         le = [0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00],
         be = [0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00]
-    });
-
-    serialization_test!( type = BitSetRef,
-    {
-        bit_set_empty,
-        BitSetRef::new(),
-        le = [0x00, 0x00, 0x00, 0x00],
-        be = [0x00, 0x00, 0x00, 0x00]
-    },
-    {
-        bit_set_non_zero_size,
-        (|| {
-            let mut set = BitSetRef::new();
-            set.insert(0);
-            set.insert(42);
-            set.insert(7);
-            set
-        })(),
-        le = [0x40, 0x00, 0x00, 0x00,
-              0x81, 0x00, 0x00, 0x00,
-              0x00, 0x04, 0x00, 0x00],
-        be = [0x00, 0x00, 0x00, 0x40,
-              0x00, 0x00, 0x00, 0x81,
-              0x00, 0x00, 0x04, 0x00]
     });
 
     serialization_test!( type = SequenceNumberSet_t,

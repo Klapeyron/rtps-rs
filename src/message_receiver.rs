@@ -6,9 +6,7 @@ use crate::common::vendor_id;
 use crate::message::submessage;
 
 use bytes::BytesMut;
-use std::io::Error;
-use std::net::SocketAddr;
-use tokio::codec::{Decoder, Encoder};
+use tokio::codec::Decoder;
 
 pub struct MessageReceiver {
     pub source_version: protocol_version::ProtocolVersion_t,
@@ -48,7 +46,7 @@ impl Decoder for MessageReceiver {
     type Item = submessage::EntitySubmessage;
     type Error = std::io::Error;
 
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+    fn decode(&mut self, _src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         unimplemented!();
     }
 }
