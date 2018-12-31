@@ -17,5 +17,4 @@ pub mod submessage_elements;
 pub mod submessage_flag;
 pub mod submessage_header;
 pub mod submessage_kind;
-pub mod validity_trait;
 pub mod vendor_id;
