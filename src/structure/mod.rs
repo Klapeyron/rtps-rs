@@ -5,6 +5,7 @@ pub mod guid;
 pub mod guid_prefix;
 pub mod instance_handle;
 pub mod locator;
+pub mod locator_kind;
 pub mod parameter_id;
 pub mod reliability_kind;
 pub mod sequence_number;
