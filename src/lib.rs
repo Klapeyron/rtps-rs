@@ -17,7 +17,6 @@ mod common;
 mod dds;
 mod discovery;
 mod history_cache;
-mod message;
 mod message_receiver;
 mod messages;
 mod participant;
