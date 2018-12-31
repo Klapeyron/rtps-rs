@@ -1,6 +1,6 @@
 use crate::common::count::Count_t;
 use crate::common::entity_id::EntityId_t;
-use crate::common::fragment_number::FragmentNumber_t;
+use crate::messages::fragment_number::FragmentNumber_t;
 use crate::common::sequence_number::SequenceNumber_t;
 
 /// When fragmenting data and until all fragments are available, the
