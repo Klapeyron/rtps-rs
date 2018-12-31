@@ -11,6 +11,7 @@ pub mod info_source;
 pub mod info_timestamp;
 pub mod protocol_id;
 pub mod protocol_version;
+pub mod receiver;
 pub mod submessage;
 pub mod submessage_elements;
 pub mod submessage_flag;
