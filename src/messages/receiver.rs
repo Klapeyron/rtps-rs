@@ -50,9 +50,3 @@ impl Decoder for MessageReceiver {
         unimplemented!();
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-}
