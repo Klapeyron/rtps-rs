@@ -1,17 +1,5 @@
-mod bit_set;
-pub mod change_kind;
-pub mod count;
-pub mod entity_id;
-pub mod guid;
-pub mod guid_prefix;
-pub mod instance_handle;
-pub mod locator;
+pub mod bit_set;
 pub mod locator_kind;
 pub mod parameter;
-pub mod parameter_id;
 pub mod parameter_list;
-pub mod reliability_kind;
-pub mod sequence_number;
 pub mod serialized_payload;
-pub mod time;
-pub mod topic_kind;

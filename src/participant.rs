@@ -1,4 +1,4 @@
-use crate::common::locator;
+use crate::structure::locator;
 use crate::messages::protocol_version;
 use crate::messages::vendor_id;
 
