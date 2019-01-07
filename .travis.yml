@@ -6,5 +6,6 @@ rust:
   - beta
   - stable
 script:
+  - cargo fmt --all -- --check
   - cargo build
   - cargo test
