@@ -107,7 +107,7 @@ mod tests {
             $(mod $name {
                 use super::*;
 
-                const FRACS_PER_SEC: i64 = 0xFFFFFFFF;
+                const FRACS_PER_SEC: i64 = 0x100000000;
 
                 macro_rules! assert_ge_at_most_by {
                     ($e:expr, $x:expr, $y:expr) => {
