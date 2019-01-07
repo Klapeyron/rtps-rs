@@ -1,5 +1,6 @@
 pub mod change_kind;
 pub mod count;
+pub mod duration;
 pub mod endpoint;
 pub mod entity_id;
 pub mod guid;
