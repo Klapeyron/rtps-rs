@@ -17,27 +17,28 @@ impl FragmentNumberSet_t {
     }
 
     pub fn insert(&mut self, fragment_number: FragmentNumber_t) -> bool {
-        let in_range = self.is_in_range(fragment_number);
-        if in_range {
-            let offset = self.base_offset(fragment_number);
-            self.set.insert(offset);
+        match self.is_in_range(fragment_number) {
+            true => {
+                let offset = self.base_offset(fragment_number);
+                self.set.insert(offset)
+            }
+            false => false,
         }
-        return in_range;
     }
 
     pub fn contains(&self, fragment_number: FragmentNumber_t) -> bool {
-        if self.is_in_range(fragment_number) {
-            return self.set.contains(self.base_offset(fragment_number));
+        match self.is_in_range(fragment_number) {
+            true => self.set.contains(self.base_offset(fragment_number)),
+            false => false,
         }
-        return false;
     }
 
     fn is_in_range(&self, fragment_number: FragmentNumber_t) -> bool {
-        fragment_number >= self.base && fragment_number <= self.base + 255
+        fragment_number >= self.base && fragment_number.value <= self.base.value + 255
     }
 
     fn base_offset(&self, fragment_number: FragmentNumber_t) -> usize {
-        (fragment_number - self.base).value as usize
+        (fragment_number.value - self.base.value) as usize
     }
 }
 
@@ -91,6 +92,11 @@ mod tests {
                 value: above_max_range
             })
         );
+
+        assert_eq!(
+            false,
+            fragment_number_set.insert(FragmentNumber_t { value: base })
+        );
     }
 
     serialization_test!( type = FragmentNumberSet_t,
@@ -106,23 +112,22 @@ mod tests {
         fragment_number_set_manual,
         (|| {
             let mut set = FragmentNumberSet_t::new(FragmentNumber_t {
-                value: 268435456
+                value: 1000
             });
-            set.insert(FragmentNumber_t {  value: 268435457 });
-            set.insert(FragmentNumber_t {  value: 268435459 });
-            set.insert(FragmentNumber_t {  value: 268435460 });
-            set.insert(FragmentNumber_t {  value: 268435462 });
-            set.insert(FragmentNumber_t {  value: 268435464 });
-            set.insert(FragmentNumber_t {  value: 268435466 });
-            set.insert(FragmentNumber_t {  value: 268435469 });
+            set.insert(FragmentNumber_t {  value: 1001 });
+            set.insert(FragmentNumber_t {  value: 1003 });
+            set.insert(FragmentNumber_t {  value: 1004 });
+            set.insert(FragmentNumber_t {  value: 1006 });
+            set.insert(FragmentNumber_t {  value: 1008 });
+            set.insert(FragmentNumber_t {  value: 1010 });
+            set.insert(FragmentNumber_t {  value: 1013 });
             set
         })(),
-        le = [0x00, 0x00, 0x00, 0x10,
+        le = [0xE8, 0x03, 0x00, 0x00,
               0x20, 0x00, 0x00, 0x00,
               0x5A, 0x25, 0x00, 0x00],
-        be = [0x10, 0x00, 0x00, 0x00,
+        be = [0x00, 0x00, 0x03, 0xE8,
               0x00, 0x00, 0x00, 0x20,
               0x00, 0x00, 0x25, 0x5A]
-
     });
 }

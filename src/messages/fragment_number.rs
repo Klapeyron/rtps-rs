@@ -1,6 +1,3 @@
-use std::ops::Add;
-use std::ops::Sub;
-
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq, Readable, Writable)]
 pub struct FragmentNumber_t {
     pub value: u32,
@@ -12,46 +9,6 @@ impl Default for FragmentNumber_t {
     }
 }
 
-impl Add<u32> for FragmentNumber_t {
-    type Output = FragmentNumber_t;
-
-    fn add(self, other: u32) -> FragmentNumber_t {
-        FragmentNumber_t {
-            value: self.value + other,
-        }
-    }
-}
-
-impl Add<FragmentNumber_t> for FragmentNumber_t {
-    type Output = FragmentNumber_t;
-
-    fn add(self, other: FragmentNumber_t) -> FragmentNumber_t {
-        FragmentNumber_t {
-            value: self.value + other.value,
-        }
-    }
-}
-
-impl Sub<u32> for FragmentNumber_t {
-    type Output = FragmentNumber_t;
-
-    fn sub(self, other: u32) -> FragmentNumber_t {
-        FragmentNumber_t {
-            value: self.value - other,
-        }
-    }
-}
-
-impl Sub<FragmentNumber_t> for FragmentNumber_t {
-    type Output = FragmentNumber_t;
-
-    fn sub(self, other: FragmentNumber_t) -> FragmentNumber_t {
-        FragmentNumber_t {
-            value: self.value - other.value,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -59,30 +16,6 @@ mod tests {
     #[test]
     fn fragment_number_starts_by_default_from_one() {
         assert_eq!(FragmentNumber_t { value: 1 }, FragmentNumber_t::default());
-    }
-
-    #[test]
-    fn fragment_number_add_fragment_number() {
-        let result = FragmentNumber_t { value: 1 } + FragmentNumber_t { value: 2 };
-        assert_eq!(FragmentNumber_t { value: 3 }, result);
-    }
-
-    #[test]
-    fn fragment_number_add_u32() {
-        let result = FragmentNumber_t { value: 3 } + 6;
-        assert_eq!(FragmentNumber_t { value: 9 }, result);
-    }
-
-    #[test]
-    fn fragment_number_sub_fragment_number() {
-        let result = FragmentNumber_t { value: 6 } - FragmentNumber_t { value: 2 };
-        assert_eq!(FragmentNumber_t { value: 4 }, result);
-    }
-
-    #[test]
-    fn fragment_number_sub_u32() {
-        let result = FragmentNumber_t { value: 3 } - 1;
-        assert_eq!(FragmentNumber_t { value: 2 }, result);
     }
 
     serialization_test!( type = FragmentNumber_t,
