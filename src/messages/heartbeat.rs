@@ -1,6 +1,7 @@
 use crate::structure::count::Count_t;
 use crate::structure::entity_id::EntityId_t;
 use crate::structure::sequence_number::SequenceNumber_t;
+use speedy_derive::{Readable, Writable};
 
 /// This Submessage is sent from an RTPS Writer to an RTPS Reader and
 /// indicates to the RTPS Reader that a range of sequence numbers
@@ -46,31 +47,23 @@ mod tests {
         Heartbeat {
             reader_id: EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,
             writer_id: EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER,
-            first_sn: SequenceNumber_t {
-                high: 42,
-                low: 7
-            },
-            last_sn: SequenceNumber_t {
-                high: 3,
-                low: 5
-            },
-            count: Count_t {
-                value: 9
-            }
+            first_sn: SequenceNumber_t::from(42),
+            last_sn: SequenceNumber_t::from(7),
+            count: Count_t::from(9)
         },
         le = [0x00, 0x00, 0x03, 0xC7,
               0x00, 0x00, 0x03, 0xC2,
+              0x00, 0x00, 0x00, 0x00,
               0x2A, 0x00, 0x00, 0x00,
+              0x00, 0x00, 0x00, 0x00,
               0x07, 0x00, 0x00, 0x00,
-              0x03, 0x00, 0x00, 0x00,
-              0x05, 0x00, 0x00, 0x00,
               0x09, 0x00, 0x00, 0x00],
         be = [0x00, 0x00, 0x03, 0xC7,
               0x00, 0x00, 0x03, 0xC2,
+              0x00, 0x00, 0x00, 0x00,
               0x00, 0x00, 0x00, 0x2A,
+              0x00, 0x00, 0x00, 0x00,
               0x00, 0x00, 0x00, 0x07,
-              0x00, 0x00, 0x00, 0x03,
-              0x00, 0x00, 0x00, 0x05,
               0x00, 0x00, 0x00, 0x09]
     });
 }

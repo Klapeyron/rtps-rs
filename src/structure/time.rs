@@ -1,16 +1,15 @@
-extern crate time;
-
+use speedy_derive::{Readable, Writable};
 use std::cmp::Ordering;
 use std::convert::From;
 
-/// The representation of the time is the one defined by the IETF Network Time Protocol (NTP)
-/// Standard (IETF RFC 1305). In this representation, time is expressed in seconds and fraction
-/// of seconds using the formula:
+/// The representation of the time is the one defined by the IETF Network Time
+/// Protocol (NTP) Standard (IETF RFC 1305). In this representation, time is
+/// expressed in seconds and fraction of seconds using the formula:
 /// time = seconds + (fraction / 2^(32))
-#[derive(Debug, PartialEq, Eq, Readable, Writable)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Readable, Writable)]
 pub struct Time_t {
-    pub seconds: i32,
-    pub fraction: u32,
+    seconds: i32,
+    fraction: u32,
 }
 
 pub type Timestamp = Time_t;
@@ -22,11 +21,11 @@ impl Time_t {
     };
     pub const TIME_INVALID: Time_t = Time_t {
         seconds: -1,
-        fraction: 0xFFFFFFFF,
+        fraction: 0xFFFF_FFFF,
     };
     pub const TIME_INFINITE: Time_t = Time_t {
-        seconds: 0x7FFFFFFF,
-        fraction: 0xFFFFFFFF,
+        seconds: 0x7FFF_FFFF,
+        fraction: 0xFFFF_FFFF,
     };
 }
 
@@ -36,7 +35,7 @@ impl From<time::Timespec> for Time_t {
     fn from(timespec: time::Timespec) -> Self {
         Time_t {
             seconds: timespec.sec as i32,
-            fraction: (((timespec.nsec as i64) << 32) / NANOS_PER_SEC) as u32,
+            fraction: ((i64::from(timespec.nsec) << 32) / NANOS_PER_SEC) as u32,
         }
     }
 }
@@ -44,24 +43,8 @@ impl From<time::Timespec> for Time_t {
 impl From<Time_t> for time::Timespec {
     fn from(time: Time_t) -> Self {
         time::Timespec {
-            sec: time.seconds as i64,
-            nsec: (((time.fraction as i64) * NANOS_PER_SEC) >> 32) as i32,
-        }
-    }
-}
-
-impl PartialOrd for Time_t {
-    fn partial_cmp(&self, other: &Time_t) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Time_t {
-    fn cmp(&self, other: &Time_t) -> Ordering {
-        match self.seconds.cmp(&other.seconds) {
-            Ordering::Equal => self.fraction.cmp(&other.fraction),
-            Ordering::Less => Ordering::Less,
-            Ordering::Greater => Ordering::Greater,
+            sec: i64::from(time.seconds),
+            nsec: ((i64::from(time.fraction) * NANOS_PER_SEC) >> 32) as i32,
         }
     }
 }

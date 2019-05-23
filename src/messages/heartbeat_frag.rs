@@ -2,6 +2,7 @@ use crate::messages::fragment_number::FragmentNumber_t;
 use crate::structure::count::Count_t;
 use crate::structure::entity_id::EntityId_t;
 use crate::structure::sequence_number::SequenceNumber_t;
+use speedy_derive::{Readable, Writable};
 
 /// When fragmenting data and until all fragments are available, the
 /// HeartbeatFrag Submessage is sent from an RTPS Writer to an RTPS Reader to
@@ -44,27 +45,20 @@ mod tests {
         HeartbeatFrag {
             reader_id: EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,
             writer_id: EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER,
-            writer_sn: SequenceNumber_t {
-                high: 42,
-                low: 7
-            },
-            last_fragment_num: FragmentNumber_t {
-                value: 99
-            },
-            count: Count_t {
-                value: 6
-            }
+            writer_sn: SequenceNumber_t::from(42),
+            last_fragment_num: FragmentNumber_t::from(99),
+            count: Count_t::from(6)
         },
         le = [0x00, 0x00, 0x03, 0xC7,
               0x00, 0x00, 0x03, 0xC2,
+              0x00, 0x00, 0x00, 0x00,
               0x2A, 0x00, 0x00, 0x00,
-              0x07, 0x00, 0x00, 0x00,
               0x63, 0x00, 0x00, 0x00,
               0x06, 0x00, 0x00, 0x00],
         be = [0x00, 0x00, 0x03, 0xC7,
               0x00, 0x00, 0x03, 0xC2,
+              0x00, 0x00, 0x00, 0x00,
               0x00, 0x00, 0x00, 0x2A,
-              0x00, 0x00, 0x00, 0x07,
               0x00, 0x00, 0x00, 0x63,
               0x00, 0x00, 0x00, 0x06]
     });

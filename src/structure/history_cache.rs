@@ -1,19 +1,9 @@
+use crate::structure::cache_change::CacheChange;
 use crate::structure::change_kind::ChangeKind_t;
-use crate::structure::guid::Guid_t;
+use crate::structure::data::Data;
+use crate::structure::guid::GUID_t;
 use crate::structure::instance_handle::InstanceHandle_t;
 use crate::structure::sequence_number::SequenceNumber_t;
-
-#[derive(PartialOrd, PartialEq, Ord, Eq)]
-struct Data {}
-
-#[derive(PartialOrd, PartialEq, Ord, Eq)]
-struct CacheChange {
-    kind: ChangeKind_t,
-    writerGuid: Guid_t,
-    instanceHandle: InstanceHandle_t,
-    sequenceNumber: SequenceNumber_t,
-    data_value: Data,
-}
 
 struct HistoryCache {
     changes: Vec<CacheChange>,
@@ -30,27 +20,28 @@ impl HistoryCache {
         self.changes.push(change)
     }
 
-    fn get_change(&self, sequenceNumber: SequenceNumber_t) -> Option<&CacheChange> {
+    fn get_change(&self, sequence_number: SequenceNumber_t) -> Option<&CacheChange> {
         self.changes
             .iter()
-            .find(|x| x.sequenceNumber == sequenceNumber)
+            .find(|x| x.sequence_number == sequence_number)
     }
 
-    fn remove_change(&mut self, sequenceNumber: SequenceNumber_t) {
-        self.changes.retain(|x| x.sequenceNumber != sequenceNumber)
+    fn remove_change(&mut self, sequence_number: SequenceNumber_t) {
+        self.changes
+            .retain(|x| x.sequence_number != sequence_number)
     }
 
     fn get_seq_num_min(&self) -> Option<&SequenceNumber_t> {
         self.changes
             .iter()
-            .map(|x| &x.sequenceNumber)
+            .map(|x| &x.sequence_number)
             .min_by(|x, y| x.cmp(&y))
     }
 
     fn get_seq_num_max(&self) -> Option<&SequenceNumber_t> {
         self.changes
             .iter()
-            .map(|x| &x.sequenceNumber)
+            .map(|x| &x.sequence_number)
             .max_by(|x, y| x.cmp(&y))
     }
 }
@@ -66,9 +57,9 @@ mod tests {
         let mut history_cache = HistoryCache::new();
         let cache_change = CacheChange {
             kind: ChangeKind_t::ALIVE,
-            writerGuid: Guid_t::GUID_UNKNOWN,
-            instanceHandle: InstanceHandle_t::default(),
-            sequenceNumber: SequenceNumber_t::SEQUENCENUMBER_UNKNOWN,
+            writer_guid: GUID_t::GUID_UNKNOWN,
+            instance_handle: InstanceHandle_t::default(),
+            sequence_number: SequenceNumber_t::SEQUENCENUMBER_UNKNOWN,
             data_value: Data {},
         };
 
@@ -86,9 +77,9 @@ mod tests {
 
         let cache_change = CacheChange {
             kind: ChangeKind_t::ALIVE,
-            writerGuid: Guid_t::GUID_UNKNOWN,
-            instanceHandle: InstanceHandle_t::default(),
-            sequenceNumber: SequenceNumber_t { high: 5, low: 1 },
+            writer_guid: GUID_t::GUID_UNKNOWN,
+            instance_handle: InstanceHandle_t::default(),
+            sequence_number: SequenceNumber_t::from(10),
             data_value: Data {},
         };
         history_cache.add_change(cache_change);
@@ -96,15 +87,15 @@ mod tests {
 
         let cache_change = CacheChange {
             kind: ChangeKind_t::ALIVE,
-            writerGuid: Guid_t::GUID_UNKNOWN,
-            instanceHandle: InstanceHandle_t::default(),
-            sequenceNumber: SequenceNumber_t { high: 7, low: 1 },
+            writer_guid: GUID_t::GUID_UNKNOWN,
+            instance_handle: InstanceHandle_t::default(),
+            sequence_number: SequenceNumber_t::from(7),
             data_value: Data {},
         };
         history_cache.add_change(cache_change);
         assert_eq!(2, history_cache.changes.len());
 
-        history_cache.remove_change(SequenceNumber_t { high: 7, low: 1 });
+        history_cache.remove_change(SequenceNumber_t::from(7));
         assert_eq!(1, history_cache.changes.len());
     }
 
@@ -114,18 +105,18 @@ mod tests {
 
         let small_cache_change = CacheChange {
             kind: ChangeKind_t::ALIVE,
-            writerGuid: Guid_t::GUID_UNKNOWN,
-            instanceHandle: InstanceHandle_t::default(),
-            sequenceNumber: SequenceNumber_t { high: 1, low: 1 },
+            writer_guid: GUID_t::GUID_UNKNOWN,
+            instance_handle: InstanceHandle_t::default(),
+            sequence_number: SequenceNumber_t::from(1),
             data_value: Data {},
         };
         history_cache.add_change(small_cache_change);
 
         let big_cache_change = CacheChange {
             kind: ChangeKind_t::ALIVE,
-            writerGuid: Guid_t::GUID_UNKNOWN,
-            instanceHandle: InstanceHandle_t::default(),
-            sequenceNumber: SequenceNumber_t { high: 7, low: 1 },
+            writer_guid: GUID_t::GUID_UNKNOWN,
+            instance_handle: InstanceHandle_t::default(),
+            sequence_number: SequenceNumber_t::from(7),
             data_value: Data {},
         };
         history_cache.add_change(big_cache_change);
@@ -133,10 +124,7 @@ mod tests {
         let smalles_cache_change = history_cache.get_seq_num_min();
 
         assert_eq!(true, smalles_cache_change.is_some());
-        assert_eq!(
-            &SequenceNumber_t { high: 1, low: 1 },
-            smalles_cache_change.unwrap()
-        );
+        assert_eq!(&SequenceNumber_t::from(1), smalles_cache_change.unwrap());
     }
 
     #[test]
@@ -145,23 +133,23 @@ mod tests {
 
         let small_cache_change = CacheChange {
             kind: ChangeKind_t::ALIVE,
-            writerGuid: Guid_t::GUID_UNKNOWN,
-            instanceHandle: InstanceHandle_t::default(),
-            sequenceNumber: SequenceNumber_t { high: 1, low: 1 },
+            writer_guid: GUID_t::GUID_UNKNOWN,
+            instance_handle: InstanceHandle_t::default(),
+            sequence_number: SequenceNumber_t::from(1),
             data_value: Data {},
         };
         history_cache.add_change(small_cache_change);
 
         let big_cache_change = CacheChange {
             kind: ChangeKind_t::ALIVE,
-            writerGuid: Guid_t {
+            writer_guid: GUID_t {
                 entityId: EntityId_t::ENTITYID_UNKNOWN,
                 guidPrefix: GuidPrefix_t {
                     entityKey: [0x00; 12],
                 },
             },
-            instanceHandle: InstanceHandle_t::default(),
-            sequenceNumber: SequenceNumber_t { high: 7, low: 1 },
+            instance_handle: InstanceHandle_t::default(),
+            sequence_number: SequenceNumber_t::from(7),
             data_value: Data {},
         };
         history_cache.add_change(big_cache_change);
@@ -169,9 +157,6 @@ mod tests {
         let biggest_cache_change = history_cache.get_seq_num_max();
 
         assert_eq!(true, biggest_cache_change.is_some());
-        assert_eq!(
-            &SequenceNumber_t { high: 7, low: 1 },
-            biggest_cache_change.unwrap()
-        );
+        assert_eq!(&SequenceNumber_t::from(7), biggest_cache_change.unwrap());
     }
 }
