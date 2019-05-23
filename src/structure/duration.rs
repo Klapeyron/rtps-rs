@@ -1,9 +1,9 @@
 extern crate time;
 
-use std::cmp::Ordering;
+use speedy_derive::{Readable, Writable};
 use std::convert::{From, Into};
 
-#[derive(Debug, PartialEq, Eq, Readable, Writable)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Readable, Writable)]
 pub struct Duration_t {
     pub seconds: i32,
     pub fraction: u32,
@@ -40,22 +40,6 @@ impl From<time::Duration> for Duration_t {
 impl Into<time::Duration> for Duration_t {
     fn into(self) -> time::Duration {
         time::Duration::nanoseconds(self.seconds as i64 * NANOS_PER_SEC + self.fraction as i64)
-    }
-}
-
-impl PartialOrd for Duration_t {
-    fn partial_cmp(&self, other: &Duration_t) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Duration_t {
-    fn cmp(&self, other: &Duration_t) -> Ordering {
-        match self.seconds.cmp(&other.seconds) {
-            Ordering::Equal => self.fraction.cmp(&other.fraction),
-            Ordering::Less => Ordering::Less,
-            Ordering::Greater => Ordering::Greater,
-        }
     }
 }
 
