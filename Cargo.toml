@@ -11,7 +11,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-time = "0.1.39"
+time = "0.2.12"
 bytes = "0.5.4"
 tokio-util = { version = "0.3.0", features = ["codec"] }
 bit-set = { git = "https://github.com/contain-rs/bit-set", rev ="c27082f" }
