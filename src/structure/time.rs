@@ -1,13 +1,12 @@
-extern crate time;
-
 use speedy::{Readable, Writable};
-use std::convert::From;
+use std::convert::{From, TryFrom};
+use std::time::{Duration, SystemTime};
 
 /// The representation of the time is the one defined by the IETF Network Time
 /// Protocol (NTP) Standard (IETF RFC 1305). In this representation, time is
 /// expressed in seconds and fraction of seconds using the formula:
 /// time = seconds + (fraction / 2^(32))
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Readable, Writable)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Readable, Writable)]
 pub struct Time_t {
     seconds: i32,
     fraction: u32,
@@ -32,20 +31,31 @@ impl Time_t {
 
 const NANOS_PER_SEC: i64 = 1_000_000_000;
 
-impl From<time::Timespec> for Time_t {
-    fn from(timespec: time::Timespec) -> Self {
-        Time_t {
-            seconds: timespec.sec as i32,
-            fraction: ((i64::from(timespec.nsec) << 32) / NANOS_PER_SEC) as u32,
-        }
+impl From<SystemTime> for Time_t {
+    fn from(sys_time: SystemTime) -> Self {
+        sys_time
+            .duration_since(std::time::UNIX_EPOCH)
+            .and_then(|dur_since_epoch| {
+                let fraction = (i64::from(dur_since_epoch.subsec_nanos()) << 32) / NANOS_PER_SEC;
+                Ok(Time_t {
+                    seconds: dur_since_epoch.as_secs() as i32,
+                    fraction: fraction as u32,
+                })
+            })
+            .unwrap_or(Time_t::TIME_INVALID)
     }
 }
 
-impl From<Time_t> for time::Timespec {
-    fn from(time: Time_t) -> Self {
-        time::Timespec {
-            sec: i64::from(time.seconds),
-            nsec: ((i64::from(time.fraction) * NANOS_PER_SEC) >> 32) as i32,
+impl TryFrom<Time_t> for SystemTime {
+    type Error = &'static str;
+
+    fn try_from(time: Time_t) -> Result<Self, Self::Error> {
+        match time {
+            Time_t::TIME_INVALID => Err("Conversion from Time_t::TIME_INVALID"),
+            _ => {
+                let fraction = (i64::from(time.fraction) * NANOS_PER_SEC) >> 32;
+                Ok(std::time::UNIX_EPOCH + Duration::new(time.seconds as u64, fraction as u32))
+            }
         }
     }
 }
@@ -53,6 +63,109 @@ impl From<Time_t> for time::Timespec {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::convert::TryInto;
+
+    #[test]
+    fn conversion_from_invalid_time_caused_an_error() {
+        matches!(SystemTime::try_from(Time_t::TIME_INVALID), Err(_));
+    }
+
+    macro_rules! conversion_test {
+        ($({ $name:ident, time = $time:expr, systime = $systime:expr, }),+) => {
+            $(mod $name {
+                use super::*;
+
+                const FRACS_PER_SEC: i64 = 0x100000000;
+
+                macro_rules! assert_ge_at_most_by {
+                    ($e:expr, $x:expr, $y:expr) => {
+                        assert!($x >= $y);
+                        assert!($x - $y <= $e);
+                    }
+                }
+
+                #[test]
+                fn time_from_systime() {
+                    let time = Time_t::from($systime);
+                    let epsilon = (FRACS_PER_SEC / NANOS_PER_SEC) as u32 + 1;
+
+                    assert_eq!($time.seconds, time.seconds);
+                    assert_ge_at_most_by!(epsilon, $time.fraction, time.fraction);
+                }
+
+                #[test]
+                fn time_from_eq_into_time() {
+                    let time_from = Time_t::from($systime);
+                    let into_time: Time_t = $systime.into();
+
+                    assert_eq!(time_from, into_time);
+                }
+
+                #[test]
+                fn systime_from_time() {
+                    let systime = SystemTime::try_from($time).unwrap();
+                    let epsilon = (NANOS_PER_SEC / FRACS_PER_SEC) as u32 + 1;
+
+                    let extract_nanos = |systime: SystemTime| {
+                        systime
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .and_then(|duration| Ok(duration.subsec_nanos()))
+                            .unwrap()
+                    };
+
+                    assert_eq!($systime, systime);
+                    assert_ge_at_most_by!(epsilon,
+                        extract_nanos($systime),
+                        extract_nanos(systime)
+                    );
+                }
+
+                #[test]
+                fn systime_from_eq_into_systime() {
+                    let systime_from = SystemTime::try_from($time).unwrap();
+                    let into_systime: SystemTime = $time.try_into().unwrap();
+
+                    assert_eq!(systime_from, into_systime);
+                }
+            })+
+        }
+    }
+
+    conversion_test!(
+    {
+        convert_time_zero,
+        time = Time_t::TIME_ZERO,
+        systime = std::time::UNIX_EPOCH + Duration::new(0, 0),
+    },
+    {
+        convert_time_non_zero,
+        time = Time_t {
+            seconds: 1,
+            fraction: 5,
+        },
+        systime = std::time::UNIX_EPOCH + Duration::new(1, 1),
+    },
+    {
+        convert_time_infinite,
+        time = Time_t::TIME_INFINITE,
+        systime = std::time::UNIX_EPOCH + Duration::new(0x7FFFFFFF, 999_999_999),
+    },
+    {
+        convert_time_non_infinite,
+        time = Time_t {
+            seconds: 0x7FFFFFFF,
+            fraction: 0xFFFFFFFA,
+        },
+        systime = std::time::UNIX_EPOCH + Duration::new(0x7FFFFFFF, 999_999_998),
+    },
+    {
+        convert_time_half_range,
+        time = Time_t {
+            seconds: 0x40000000,
+            fraction: 0x80000000,
+        },
+        systime = std::time::UNIX_EPOCH + Duration::new(0x40000000, 500_000_000),
+    });
 
     serialization_test!( type = Time_t,
     {
@@ -84,115 +197,5 @@ mod tests {
         Time_t { seconds: 1_519_152_760, fraction: 1_328_210_046 },
         le = [0x78, 0x6E, 0x8C, 0x5A, 0x7E, 0xE0, 0x2A, 0x4F],
         be = [0x5A, 0x8C, 0x6E, 0x78, 0x4F, 0x2A, 0xE0, 0x7E]
-    });
-
-    macro_rules! conversion_test {
-        ($({ $name:ident, time = $time:expr, timespec = $timespec:expr, }),+) => {
-            $(mod $name {
-                use super::*;
-
-                const FRACS_PER_SEC: i64 = 0x100000000;
-
-                macro_rules! assert_ge_at_most_by {
-                    ($e:expr, $x:expr, $y:expr) => {
-                        assert!($x >= $y);
-                        assert!($x - $y <= $e);
-                    }
-                }
-
-                #[test]
-                fn time_from_timespec() {
-                    let time = Time_t::from($timespec);
-                    let epsilon = (FRACS_PER_SEC / NANOS_PER_SEC) as u32 + 1;
-
-                    assert_eq!($time.seconds, time.seconds);
-                    assert_ge_at_most_by!(epsilon, $time.fraction, time.fraction);
-                }
-
-                #[test]
-                fn time_from_eq_into_time() {
-                    let time_from = Time_t::from($timespec);
-                    let into_time: Time_t = $timespec.into();
-
-                    assert_eq!(time_from, into_time);
-                }
-
-                #[test]
-                fn timespec_from_time() {
-                    let timespec = time::Timespec::from($time);
-                    let epsilon = (NANOS_PER_SEC / FRACS_PER_SEC) as i32 + 1;
-
-                    assert_eq!($timespec.sec, timespec.sec);
-                    assert_ge_at_most_by!(epsilon, $timespec.nsec, timespec.nsec);
-                }
-
-                #[test]
-                fn timespec_from_eq_into_timespec() {
-                    let timespec_from = time::Timespec::from($time);
-                    let into_timespec: time::Timespec = $time.into();
-
-                    assert_eq!(timespec_from, into_timespec);
-                }
-            })+
-        }
-    }
-
-    conversion_test!(
-    {
-        convert_time_zero,
-        time = Time_t::TIME_ZERO,
-        timespec = time::Timespec {
-            sec: 0,
-            nsec: 0,
-        },
-    },
-    {
-        convert_time_non_zero,
-        time = Time_t {
-            seconds: 1,
-            fraction: 5,
-        },
-        timespec = time::Timespec {
-            sec: 1,
-            nsec: 1,
-        },
-    },
-    {
-        convert_time_invalid,
-        time = Time_t::TIME_INVALID,
-        timespec = time::Timespec {
-            sec: -1,
-            nsec: 999_999_999,
-        },
-    },
-    {
-        convert_time_infinite,
-        time = Time_t::TIME_INFINITE,
-        timespec = time::Timespec {
-            sec: 0x7FFFFFFF,
-            nsec: 999_999_999,
-        },
-    },
-    {
-        convert_time_non_infinite,
-        time = Time_t {
-            seconds: 0x7FFFFFFF,
-            fraction: 0xFFFFFFFA,
-        },
-        timespec = time::Timespec {
-            sec: 0x7FFFFFFF,
-            nsec: 999_999_998,
-        },
-    },
-    {
-        convert_time_half_range,
-        time = Time_t {
-            seconds: 0x40000000,
-            fraction: 0x80000000,
-        },
-        timespec = time::Timespec {
-            sec: 0x40000000,
-            nsec: 500_000_000,
-        },
     });
 }
