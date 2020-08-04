@@ -1,6 +1,7 @@
 [![Crates.io][crates-badge]][crates-url]
 [![Apache 2.0 licensed][licence-badge]][licence-url]
 [![Travis Build Status][travis-badge]][travis-url]
+[![Coverage Status](https://coveralls.io/repos/github/Klapeyron/rtps-rs/badge.svg)](https://coveralls.io/github/Klapeyron/rtps-rs)
 
 # The Real-time Publish-Subscribe Protocol for Rust
 
