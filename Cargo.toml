@@ -12,10 +12,11 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.6.0"
-tokio-util = { version = "0.5.0", features = ["codec"] }
-bit-set = { git = "https://github.com/contain-rs/bit-set", rev ="c27082f" }
-bit-vec = "0.6.2"
+tokio-util = { version = "0.5.1", features = ["codec"] }
+bit-set = "0.5.2"
+bit-vec = "0.6.3"
 speedy = "0.7.1"
-log = "0.4.8"
+log = "0.4.11"
 num-traits = "0.2"
 num-derive = "0.3"
+err-derive = "0.3"
