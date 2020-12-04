@@ -41,9 +41,9 @@ impl Writer for StatefulWriter {
     /// one.
     fn new_change(
         &mut self,
-        kind: ChangeKind_t,
-        data: Data,
-        handle: InstanceHandle_t,
+        _kind: ChangeKind_t,
+        _data: Data,
+        _handle: InstanceHandle_t,
     ) -> CacheChange {
         unimplemented!();
     }
@@ -77,6 +77,4 @@ impl StatefulWriter {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-}
+mod tests {}

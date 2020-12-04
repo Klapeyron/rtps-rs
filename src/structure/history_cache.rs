@@ -1,8 +1,4 @@
 use crate::structure::cache_change::CacheChange;
-use crate::structure::change_kind::ChangeKind_t;
-use crate::structure::data::Data;
-use crate::structure::guid::GUID_t;
-use crate::structure::instance_handle::InstanceHandle_t;
 use crate::structure::sequence_number::SequenceNumber_t;
 
 struct HistoryCache {
@@ -49,8 +45,12 @@ impl HistoryCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::structure::change_kind::ChangeKind_t;
+    use crate::structure::data::Data;
     use crate::structure::entity_id::EntityId_t;
+    use crate::structure::guid::GUID_t;
     use crate::structure::guid_prefix::GuidPrefix_t;
+    use crate::structure::instance_handle::InstanceHandle_t;
 
     #[test]
     fn add_change_test() {

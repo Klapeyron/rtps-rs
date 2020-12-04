@@ -1,8 +1,5 @@
-use crate::behavior::change_for_reader::ChangeForReader;
-use crate::behavior::change_for_reader_status_kind::ChangeForReaderStatusKind;
 use crate::structure::cache_change::CacheChange;
 use crate::structure::guid::GUID_t;
-use crate::structure::locator::Locator_t;
 use crate::structure::sequence_number::SequenceNumber_t;
 
 /// The RTPS ReaderProxy class represents the information an RTPS StatefulWriter
@@ -120,7 +117,7 @@ mod tests {
             .unsent_changes(&changes)
             .any(|change| change == &changes[1]));
 
-        let next_unsent_change = reader_proxy.next_unsent_change(&changes);
+        let _next_unsent_change = reader_proxy.next_unsent_change(&changes);
 
         assert_eq!(2, reader_proxy.unsent_changes(&changes).count());
         assert!(!reader_proxy

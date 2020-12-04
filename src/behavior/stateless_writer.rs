@@ -96,6 +96,4 @@ impl StatelessWriter {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-}
+mod tests {}

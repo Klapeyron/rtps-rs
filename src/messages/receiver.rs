@@ -2,19 +2,15 @@ use crate::common::validity_trait::Validity;
 use crate::messages::ack_nack::AckNack;
 use crate::messages::header::Header;
 use crate::messages::protocol_version::ProtocolVersion_t;
-use crate::messages::submessage::{EntitySubmessage, InterpreterSubmessage};
-use crate::messages::submessage_flag::SubmessageFlag;
+use crate::messages::submessage::EntitySubmessage;
 use crate::messages::submessage_header::SubmessageHeader;
 use crate::messages::submessage_kind::SubmessageKind;
 use crate::messages::vendor_id::VendorId_t;
-use crate::structure::count::Count_t;
-use crate::structure::entity_id::EntityId_t;
 use crate::structure::guid_prefix::GuidPrefix_t;
 use crate::structure::locator::{LocatorKind_t, LocatorList_t, Locator_t};
-use crate::structure::sequence_number::SequenceNumber_t;
-use crate::structure::sequence_number_set::SequenceNumberSet_t;
+
 use crate::structure::time::Time_t;
-use speedy::{Endianness, Readable, Writable};
+use speedy::{Endianness, Readable};
 use std::io::{Error, ErrorKind};
 
 use bytes::BytesMut;
@@ -145,6 +141,11 @@ impl Decoder for MessageReceiver {
 mod tests {
     use super::*;
     use crate::messages::header::Header;
+    use crate::messages::submessage_flag::SubmessageFlag;
+    use crate::structure::count::Count_t;
+    use crate::structure::entity_id::EntityId_t;
+    use crate::structure::sequence_number::SequenceNumber_t;
+    use crate::structure::sequence_number_set::SequenceNumberSet_t;
 
     struct EntitySubmessageIterator {
         message_receiver: MessageReceiver,
@@ -165,6 +166,7 @@ mod tests {
         expected_notifications = [ $($expected_notification:expr),* ]) => {
             mod $name {
                 use super::*;
+                use speedy::{Writable};
 
                 fn serialize_into_bytes() -> bytes::BytesMut {
                     let mut serialized_input: Vec<u8> = $header.write_to_vec_with_ctx(Endianness::NATIVE).unwrap();
