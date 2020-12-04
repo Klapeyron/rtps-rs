@@ -27,7 +27,9 @@ impl<'a, C: Context> Readable<'a, C> for SubmessageHeader {
 
     #[inline]
     fn minimum_bytes_needed() -> usize {
-        std::mem::size_of::<Self>()
+        <SubmessageKind as Readable<Endianness>>::minimum_bytes_needed()
+            + <SubmessageFlag as Readable<Endianness>>::minimum_bytes_needed()
+            + <u16 as Readable<Endianness>>::minimum_bytes_needed()
     }
 }
 

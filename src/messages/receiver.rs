@@ -1,6 +1,7 @@
 use crate::common::validity_trait::Validity;
 use crate::messages::ack_nack::AckNack;
 use crate::messages::header::Header;
+use crate::messages::info_source::InfoSource;
 use crate::messages::protocol_version::ProtocolVersion_t;
 use crate::messages::submessage::EntitySubmessage;
 use crate::messages::submessage_header::SubmessageHeader;
@@ -118,17 +119,46 @@ impl Decoder for MessageReceiver {
                                 submessage_header.flags,
                             )))
                         }
+                        SubmessageKind::INFO_SRC => {
+                            let info_src = InfoSource::read_from_buffer_owned_with_ctx(
+                                submessage_header.flags.endianness_flag(),
+                                &bytes.split_to(submessage_header.submessage_length.into()),
+                            )?;
+                            self.receiver.source_guid_prefix = info_src.guid_prefix;
+                            self.receiver.source_version = info_src.protocol_version;
+                            self.receiver.source_vendor_id = info_src.vendor_id;
+                            self.receiver.unicast_reply_locator_list =
+                                vec![Locator_t::LOCATOR_INVALID];
+                            self.receiver.multicast_reply_locator_list =
+                                vec![Locator_t::LOCATOR_INVALID];
+                            self.receiver.have_timestamp = false;
+
+                            Ok(None)
+                        }
+                        SubmessageKind::INFO_TS => {
+                            if !submessage_header.flags.is_flag_set(0x02) {
+                                let timestamp = Time_t::read_from_buffer_owned_with_ctx(
+                                    submessage_header.flags.endianness_flag(),
+                                    &bytes.split_to(submessage_header.submessage_length.into()),
+                                )?;
+                                self.receiver.have_timestamp = true;
+                                self.receiver.timestamp = timestamp;
+                            } else {
+                                self.receiver.have_timestamp = false;
+                            }
+
+                            Ok(None)
+                        }
                         /*
-                        SubmessageKind::DATA => Ok(None),
-                        SubmessageKind::DATA_FRAG => Ok(None),
-                        SubmessageKind::GAP => Ok(None),
-                        SubmessageKind::HEARTBEAT => Ok(None),
-                        SubmessageKind::HEARTBEAT_FRAG => Ok(None),
-                        SubmessageKind::NACK_FRAG => Ok(None),
-                        SubmessageKind::INFO_DST => Ok(None),
+                          SubmessageKind::DATA => Ok(None),
+                          SubmessageKind::DATA_FRAG => Ok(None),
+                          SubmessageKind::GAP => Ok(None),
+                          SubmessageKind::HEARTBEAT => Ok(None),
+                          SubmessageKind::HEARTBEAT_FRAG => Ok(None),
+                          SubmessageKind::NACK_FRAG => Ok(None),
                         */
                         // TODO: skip this submessage and go to another one
-                        _ => unimplemented!(),
+                        _ => Err(speedy::Error::custom("Invalid submessage id".to_owned())),
                     }
                 })
                 .or_else(|err| Err(err.into()))
@@ -162,7 +192,7 @@ mod tests {
 
     macro_rules! message_decoding_test {
         (test_name = $name:ident, header = $header:expr,
-        [$(submessage_header = $submessage_header:expr, submessage_entities = [ $($entity:expr),* ]),+],
+        [$(submessage_header = $submessage_header:expr, submessage_entities = [ $($entity:expr),* ],)+],
         expected_notifications = [ $($expected_notification:expr),* ]) => {
             mod $name {
                 use super::*;
@@ -227,9 +257,15 @@ mod tests {
     }
 
     message_decoding_test!(
-        test_name = single_ack_nack,
+        test_name = single_ack_nack_with_non_empty_info_ts,
         header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
         [
+            submessage_header = SubmessageHeader {
+                submessage_id: SubmessageKind::INFO_TS,
+                flags: SubmessageFlag { flags: 0b0100_0000 },
+                submessage_length: 24,
+            },
+            submessage_entities = [Time_t::TIME_INFINITE],
             submessage_header = SubmessageHeader {
                 submessage_id: SubmessageKind::ACKNACK,
                 flags: SubmessageFlag { flags: 0b0000_0000 },
@@ -240,7 +276,7 @@ mod tests {
                 EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER,
                 SequenceNumberSet_t::new(SequenceNumber_t::from(0)),
                 Count_t::from(1)
-            ]
+            ],
         ],
         expected_notifications = [Ok(EntitySubmessage::AckNack(
             AckNack {
