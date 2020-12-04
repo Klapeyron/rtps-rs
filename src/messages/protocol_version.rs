@@ -1,6 +1,6 @@
 use speedy::{Readable, Writable};
 
-#[derive(Debug, PartialOrd, PartialEq, Ord, Eq, Readable, Writable)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq, Readable, Writable)]
 pub struct ProtocolVersion_t {
     pub major: u8,
     pub minor: u8,

@@ -8,5 +8,5 @@ pub struct InfoTimestamp {
     /// subsequent Submessages
     ///
     /// Present only if the InvalidateFlag is not set in the header.
-    pub timestamp: Timestamp,
+    pub timestamp: Option<Timestamp>,
 }

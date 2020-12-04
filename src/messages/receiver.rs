@@ -35,7 +35,6 @@ pub struct Receiver {
 enum DeserializationState {
     ReadingHeader,
     ReadingSubmessage,
-    Finished,
 }
 
 pub struct MessageReceiver {
@@ -74,7 +73,71 @@ impl Decoder for MessageReceiver {
     type Error = std::io::Error;
 
     fn decode(&mut self, bytes: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        Ok(None)
+        let validate_header = |header: Header| {
+            if header.valid() {
+                Ok(header)
+            } else {
+                Err(speedy::Error::custom("Invalid data".to_owned()))
+            }
+        };
+
+        match self.state {
+            DeserializationState::ReadingHeader => Header::read_from_buffer_owned_with_ctx(
+                Endianness::NATIVE,
+                &bytes.split_to(<Header as Readable<Endianness>>::minimum_bytes_needed()),
+            )
+            .and_then(validate_header)
+            .and_then(|header: Header| {
+                self.receiver.source_guid_prefix = header.guid_prefix;
+                self.receiver.source_version = header.protocol_version;
+                self.receiver.source_vendor_id = header.vendor_id;
+                self.receiver.have_timestamp = false;
+
+                self.state = DeserializationState::ReadingSubmessage;
+                Ok(None)
+            })
+            .or_else(|err| {
+                Err(Error::new(
+                    ErrorKind::InvalidData,
+                    format!("Header parsing error: {:?}", err),
+                ))
+            }),
+
+            DeserializationState::ReadingSubmessage => {
+                SubmessageHeader::read_from_buffer_owned_with_ctx(
+                    Endianness::NATIVE,
+                    &bytes.split_to(
+                        <SubmessageHeader as Readable<Endianness>>::minimum_bytes_needed(),
+                    ),
+                )
+                .and_then(|submessage_header| {
+                    match submessage_header.submessage_id {
+                        SubmessageKind::ACKNACK => {
+                            let ack_nack = AckNack::read_from_buffer_owned_with_ctx(
+                                submessage_header.flags.endianness_flag(),
+                                &bytes,
+                            )?;
+                            Ok(Some(EntitySubmessage::AckNack(
+                                ack_nack,
+                                submessage_header.flags,
+                            )))
+                        }
+                        /*
+                        SubmessageKind::DATA => Ok(None),
+                        SubmessageKind::DATA_FRAG => Ok(None),
+                        SubmessageKind::GAP => Ok(None),
+                        SubmessageKind::HEARTBEAT => Ok(None),
+                        SubmessageKind::HEARTBEAT_FRAG => Ok(None),
+                        SubmessageKind::NACK_FRAG => Ok(None),
+                        SubmessageKind::INFO_DST => Ok(None),
+                        */
+                        // TODO: skip this submessage and go to another one
+                        _ => unimplemented!(),
+                    }
+                })
+                .or_else(|err| Err(err.into()))
+            }
+        }
     }
 }
 
@@ -98,7 +161,7 @@ mod tests {
 
     macro_rules! message_decoding_test {
         (test_name = $name:ident, header = $header:expr,
-        [$(submessage_header = $submessage_header:expr, submessage_entities = { $($entity:expr),* }),+],
+        [$(submessage_header = $submessage_header:expr, submessage_entities = [ $($entity:expr),* ]),+],
         expected_notifications = [ $($expected_notification:expr),* ]) => {
             mod $name {
                 use super::*;
@@ -113,15 +176,14 @@ mod tests {
                                 $entity.write_to_vec_with_ctx(submessage_header.flags.endianness_flag()).unwrap();
                             submessage_content.extend(serialized_submessage.into_iter());
                         )*
-
                         submessage_header.submessage_length = submessage_content.len() as u16;
-                        submessage_header.write_to_vec_with_ctx(submessage_header.flags.endianness_flag()).unwrap();
+                        let submessage_header = submessage_header.write_to_vec_with_ctx(submessage_header.flags.endianness_flag()).unwrap();
+                        serialized_input.extend(submessage_header.into_iter());
                         serialized_input.extend(submessage_content.into_iter());
                     )+
                     bytes::BytesMut::from(&serialized_input[..])
                 }
 
-                #[ignore]
                 #[test]
                 fn test_submessage_decoding() {
                     let messages_iterator = EntitySubmessageIterator {
@@ -136,6 +198,8 @@ mod tests {
                         });
 
                     let decoder_output = messages_iterator
+                        // Decoder impl is not greedy right now, which means it returns Ok(None)
+                        // after it parses a header
                         .take(10*expected_notifications.len())
                         .filter(|maybe_message| match maybe_message {
                             Ok(None) => false,
@@ -143,14 +207,17 @@ mod tests {
                         })
                         .map(|maybe_parsed_message|
                             match maybe_parsed_message {
-                                Ok(Some(parsed_message)) => parsed_message,
-                                _ => unreachable!()
+                                Ok(Some(parsed_message)) => Ok(parsed_message),
+                                Err(error) => Err((error.kind(), format!("Description: {:?}", error))),
+                                Ok(None) => unreachable!()
                             }
                         )
                         .inspect(|parsed_message| {
                             println!("Parsed message: {:#?}", parsed_message)
-                        });
-
+                        })
+                        // Let's take only amount of parsed messages/errors that matches to expectations
+                        // we do not care what happends after that :)
+                        .take(expected_notifications.len());
                     assert!(decoder_output.eq(expected_notifications));
                 }
             }
@@ -166,23 +233,21 @@ mod tests {
                 flags: SubmessageFlag { flags: 0b0000_0000 },
                 submessage_length: 24,
             },
-            submessage_entities = {
+            submessage_entities = [
                 EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,
                 EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER,
                 SequenceNumberSet_t::new(SequenceNumber_t::from(0)),
                 Count_t::from(1)
-            }
+            ]
         ],
-        expected_notifications = [
-            EntitySubmessage::AckNack(
-                AckNack {
-                    reader_id: EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,
-                    writer_id: EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER,
-                    reader_sn_state: SequenceNumberSet_t::new(SequenceNumber_t::from(0)),
-                    count: Count_t::from(1)
-                },
-                SubmessageFlag { flags: 0b0000_0000 }
-            )
-        ]
+        expected_notifications = [Ok(EntitySubmessage::AckNack(
+            AckNack {
+                reader_id: EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,
+                writer_id: EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER,
+                reader_sn_state: SequenceNumberSet_t::new(SequenceNumber_t::from(0)),
+                count: Count_t::from(1)
+            },
+            SubmessageFlag { flags: 0b0000_0000 }
+        ))]
     );
 }
