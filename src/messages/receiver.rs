@@ -1,5 +1,6 @@
 use crate::common::validity_trait::Validity;
 use crate::messages::ack_nack::AckNack;
+use crate::messages::gap::Gap;
 use crate::messages::header::Header;
 use crate::messages::info_source::InfoSource;
 use crate::messages::protocol_version::ProtocolVersion_t;
@@ -8,7 +9,6 @@ use crate::messages::submessage_header::SubmessageHeader;
 use crate::messages::submessage_kind::SubmessageKind;
 use crate::messages::vendor_id::VendorId_t;
 use crate::structure::guid_prefix::GuidPrefix_t;
-use crate::messages::gap::Gap;
 use crate::structure::locator::{LocatorKind_t, LocatorList_t, Locator_t};
 
 use crate::structure::time::Time_t;
@@ -119,14 +119,14 @@ impl Decoder for MessageReceiver {
                                 ack_nack,
                                 submessage_header.flags,
                             )))
-                        },
+                        }
                         SubmessageKind::GAP => {
                             let gap = Gap::read_from_buffer_owned_with_ctx(
                                 submessage_header.flags.endianness_flag(),
                                 &bytes.split_to(submessage_header.submessage_length.into()),
                             )?;
                             Ok(Some(EntitySubmessage::Gap(gap)))
-                        },
+                        }
                         SubmessageKind::INFO_SRC => {
                             let info_src = InfoSource::read_from_buffer_owned_with_ctx(
                                 submessage_header.flags.endianness_flag(),
@@ -270,7 +270,7 @@ mod tests {
         [
             submessage_header = SubmessageHeader {
                 submessage_id: SubmessageKind::INFO_TS,
-                flags: SubmessageFlag { flags: 0b0100_0000 },
+                flags: SubmessageFlag { flags: 0b0000_0000 },
                 submessage_length: 24,
             },
             submessage_entities = [Time_t::TIME_INFINITE],
