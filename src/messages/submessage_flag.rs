@@ -22,14 +22,14 @@ impl SubmessageFlag {
         }
     }
 
-    pub fn set_flag(&mut self, bit: u8) {
-        self.flags |= bit;
+    pub fn set_flag(&mut self, mask: u8) {
+        self.flags |= mask;
     }
-    pub fn clear_flag(&mut self, bit: u8) {
-        self.flags &= !bit;
+    pub fn clear_flag(&mut self, mask: u8) {
+        self.flags &= !mask;
     }
-    pub fn is_flag_set(&self, bit: u8) -> bool {
-        self.flags & bit != 0
+    pub fn is_flag_set(&self, mask: u8) -> bool {
+        self.flags & mask != 0
     }
 }
 
