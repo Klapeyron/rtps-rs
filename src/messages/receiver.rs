@@ -8,6 +8,7 @@ use crate::messages::submessage_header::SubmessageHeader;
 use crate::messages::submessage_kind::SubmessageKind;
 use crate::messages::vendor_id::VendorId_t;
 use crate::structure::guid_prefix::GuidPrefix_t;
+use crate::messages::gap::Gap;
 use crate::structure::locator::{LocatorKind_t, LocatorList_t, Locator_t};
 
 use crate::structure::time::Time_t;
@@ -112,13 +113,20 @@ impl Decoder for MessageReceiver {
                         SubmessageKind::ACKNACK => {
                             let ack_nack = AckNack::read_from_buffer_owned_with_ctx(
                                 submessage_header.flags.endianness_flag(),
-                                &bytes,
+                                &bytes.split_to(submessage_header.submessage_length.into()),
                             )?;
                             Ok(Some(EntitySubmessage::AckNack(
                                 ack_nack,
                                 submessage_header.flags,
                             )))
-                        }
+                        },
+                        SubmessageKind::GAP => {
+                            let gap = Gap::read_from_buffer_owned_with_ctx(
+                                submessage_header.flags.endianness_flag(),
+                                &bytes.split_to(submessage_header.submessage_length.into()),
+                            )?;
+                            Ok(Some(EntitySubmessage::Gap(gap)))
+                        },
                         SubmessageKind::INFO_SRC => {
                             let info_src = InfoSource::read_from_buffer_owned_with_ctx(
                                 submessage_header.flags.endianness_flag(),
