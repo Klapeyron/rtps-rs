@@ -51,6 +51,14 @@ mod tests {
         assert_eq!(FragmentNumber_t::from(1), FragmentNumber_t::default());
     }
 
+    #[test]
+    fn conversion_test() {
+        assert_eq!(
+            u32::from(FragmentNumber_t::from(77)),
+            FragmentNumber_t::from(77).into()
+        );
+    }
+
     serialization_test!( type = FragmentNumber_t,
     {
         fragment_number_zero,
