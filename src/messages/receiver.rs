@@ -260,6 +260,8 @@ impl Decoder for MessageReceiver {
 
 #[cfg(test)]
 mod tests {
+    use speedy::Writable;
+
     use super::*;
     use crate::messages::fragment_number::FragmentNumber_t;
     use crate::messages::header::Header;
@@ -282,16 +284,10 @@ mod tests {
         }
     }
 
-    macro_rules! message_decoding_test {
-        (test_name = $name:ident, header = $header:expr,
-        [$(submessage_header = $submessage_header:expr, submessage_entities = [ $($entity:expr),* ],)+],
-        expected_notifications = [ $($expected_notification:expr),* ]) => {
-            mod $name {
-                use super::*;
-                use speedy::{Writable};
-
-                fn serialize_into_bytes() -> bytes::BytesMut {
-                    let mut serialized_input: Vec<u8> = $header.write_to_vec_with_ctx(Endianness::NATIVE).unwrap();
+    macro_rules! encode_message {
+        (header = $header:expr,
+            [$(submessage_header = $submessage_header:expr, submessage_entities = [ $($entity:expr),* ],)+]) => {{
+                let mut serialized_input: Vec<u8> = $header.write_to_vec_with_ctx(Endianness::NATIVE).unwrap();
                     $(
                         let mut submessage_header = $submessage_header;
                         let mut submessage_content: Vec<u8> = vec![];
@@ -312,14 +308,21 @@ mod tests {
                         serialized_input.extend(submessage_header.into_iter());
                         serialized_input.extend(submessage_content.into_iter());
                     )+
-                    bytes::BytesMut::from(&serialized_input[..])
-                }
+                bytes::BytesMut::from(&serialized_input[..])
+            }};
+    }
+
+    macro_rules! message_decoding_test {
+        (test_name = $name:ident, bytes = $bytes:expr,
+        expected_notifications = [ $($expected_notification:expr),* ]) => {
+            mod $name {
+                use super::*;
 
                 #[test]
                 fn test_submessage_decoding() {
                     let messages_iterator = EntitySubmessageIterator {
                         message_receiver: MessageReceiver::new(LocatorKind_t::LOCATOR_KIND_INVALID),
-                        bytes: serialize_into_bytes()
+                        bytes: $bytes
                     };
 
                     let expected_notifications = vec![$($expected_notification),*]
@@ -357,26 +360,28 @@ mod tests {
 
     message_decoding_test!(
         test_name = single_ack_nack_with_non_empty_info_ts,
-        header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
-        [
-            submessage_header = SubmessageHeader {
-                submessage_id: SubmessageKind::INFO_TS,
-                flags: SubmessageFlag { flags: 0b0000_0000 },
-                submessage_length: 8,
-            },
-            submessage_entities = [Time_t::TIME_INFINITE],
-            submessage_header = SubmessageHeader {
-                submessage_id: SubmessageKind::ACKNACK,
-                flags: SubmessageFlag { flags: 0b0000_0000 },
-                submessage_length: 24,
-            },
-            submessage_entities = [
-                EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,
-                EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER,
-                SequenceNumberSet_t::new(SequenceNumber_t::from(0)),
-                Count_t::from(1)
-            ],
-        ],
+        bytes = encode_message!(
+            header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
+            [
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::INFO_TS,
+                    flags: SubmessageFlag { flags: 0b0000_0000 },
+                    submessage_length: 8,
+                },
+                submessage_entities = [Time_t::TIME_INFINITE],
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::ACKNACK,
+                    flags: SubmessageFlag { flags: 0b0000_0000 },
+                    submessage_length: 24,
+                },
+                submessage_entities = [
+                    EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,
+                    EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER,
+                    SequenceNumberSet_t::new(SequenceNumber_t::from(0)),
+                    Count_t::from(1)
+                ],
+            ]
+        ),
         expected_notifications = [Ok(EntitySubmessage::AckNack(
             AckNack {
                 reader_id: EntityId_t::ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER,
@@ -390,30 +395,32 @@ mod tests {
 
     message_decoding_test!(
         test_name = single_gap_with_info_src,
-        header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
-        [
-            submessage_header = SubmessageHeader {
-                submessage_id: SubmessageKind::INFO_SRC,
-                flags: SubmessageFlag { flags: 0b0000_0001 },
-                submessage_length: 16,
-            },
-            submessage_entities = [
-                ProtocolVersion_t::PROTOCOLVERSION,
-                VendorId_t::VENDOR_UNKNOWN,
-                GuidPrefix_t::GUIDPREFIX_UNKNOWN
-            ],
-            submessage_header = SubmessageHeader {
-                submessage_id: SubmessageKind::GAP,
-                flags: SubmessageFlag { flags: 0b0000_0000 },
-                submessage_length: 28,
-            },
-            submessage_entities = [
-                EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
-                EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
-                SequenceNumber_t::from(42),
-                SequenceNumberSet_t::new(SequenceNumber_t::from(0b10110100))
-            ],
-        ],
+        bytes = encode_message!(
+            header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
+            [
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::INFO_SRC,
+                    flags: SubmessageFlag { flags: 0b0000_0001 },
+                    submessage_length: 16,
+                },
+                submessage_entities = [
+                    ProtocolVersion_t::PROTOCOLVERSION,
+                    VendorId_t::VENDOR_UNKNOWN,
+                    GuidPrefix_t::GUIDPREFIX_UNKNOWN
+                ],
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::GAP,
+                    flags: SubmessageFlag { flags: 0b0000_0000 },
+                    submessage_length: 28,
+                },
+                submessage_entities = [
+                    EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
+                    EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
+                    SequenceNumber_t::from(42),
+                    SequenceNumberSet_t::new(SequenceNumber_t::from(0b10110100))
+                ],
+            ]
+        ),
         expected_notifications = [Ok(EntitySubmessage::Gap(Gap {
             reader_id: EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
             writer_id: EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
@@ -424,27 +431,29 @@ mod tests {
 
     message_decoding_test!(
         test_name = single_heartbeat_with_info_dst,
-        header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
-        [
-            submessage_header = SubmessageHeader {
-                submessage_id: SubmessageKind::INFO_DST,
-                flags: SubmessageFlag { flags: 0b0000_0001 },
-                submessage_length: 12,
-            },
-            submessage_entities = [GuidPrefix_t::GUIDPREFIX_UNKNOWN],
-            submessage_header = SubmessageHeader {
-                submessage_id: SubmessageKind::HEARTBEAT,
-                flags: SubmessageFlag { flags: 0b0000_0001 },
-                submessage_length: 28,
-            },
-            submessage_entities = [
-                EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
-                EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
-                SequenceNumber_t::from(7),
-                SequenceNumber_t::from(11),
-                Count_t::from(99)
-            ],
-        ],
+        bytes = encode_message!(
+            header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
+            [
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::INFO_DST,
+                    flags: SubmessageFlag { flags: 0b0000_0001 },
+                    submessage_length: 12,
+                },
+                submessage_entities = [GuidPrefix_t::GUIDPREFIX_UNKNOWN],
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::HEARTBEAT,
+                    flags: SubmessageFlag { flags: 0b0000_0001 },
+                    submessage_length: 28,
+                },
+                submessage_entities = [
+                    EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
+                    EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
+                    SequenceNumber_t::from(7),
+                    SequenceNumber_t::from(11),
+                    Count_t::from(99)
+                ],
+            ]
+        ),
         expected_notifications = [Ok(EntitySubmessage::Heartbeat(
             Heartbeat {
                 reader_id: EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
@@ -459,37 +468,39 @@ mod tests {
 
     message_decoding_test!(
         test_name = single_heartbeat_frag_with_info_reply_and_multicast_locator_list,
-        header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
-        [
-            submessage_header = SubmessageHeader {
-                submessage_id: SubmessageKind::INFO_REPLAY,
-                flags: SubmessageFlag { flags: 0b0000_0011 },
-                submessage_length: 80,
-            },
-            submessage_entities = [
-                vec![Locator_t::LOCATOR_INVALID],
-                vec![
-                    Locator_t::from("127.0.0.1:8080".parse::<std::net::SocketAddr>().unwrap()),
-                    Locator_t::from(
-                        "[2001:db8::1]:8080"
-                            .parse::<std::net::SocketAddr>()
-                            .unwrap()
-                    )
-                ]
-            ],
-            submessage_header = SubmessageHeader {
-                submessage_id: SubmessageKind::HEARTBEAT_FRAG,
-                flags: SubmessageFlag { flags: 0b0000_0000 },
-                submessage_length: 24,
-            },
-            submessage_entities = [
-                EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
-                EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
-                SequenceNumber_t::from(36),
-                FragmentNumber_t::from(33),
-                Count_t::from(12345)
-            ],
-        ],
+        bytes = encode_message!(
+            header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
+            [
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::INFO_REPLAY,
+                    flags: SubmessageFlag { flags: 0b0000_0011 },
+                    submessage_length: 80,
+                },
+                submessage_entities = [
+                    vec![Locator_t::LOCATOR_INVALID],
+                    vec![
+                        Locator_t::from("127.0.0.1:8080".parse::<std::net::SocketAddr>().unwrap()),
+                        Locator_t::from(
+                            "[2001:db8::1]:8080"
+                                .parse::<std::net::SocketAddr>()
+                                .unwrap()
+                        )
+                    ]
+                ],
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::HEARTBEAT_FRAG,
+                    flags: SubmessageFlag { flags: 0b0000_0000 },
+                    submessage_length: 24,
+                },
+                submessage_entities = [
+                    EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
+                    EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
+                    SequenceNumber_t::from(36),
+                    FragmentNumber_t::from(33),
+                    Count_t::from(12345)
+                ],
+            ]
+        ),
         expected_notifications = [Ok(EntitySubmessage::HeartbeatFrag(HeartbeatFrag {
             reader_id: EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
             writer_id: EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
@@ -497,5 +508,27 @@ mod tests {
             last_fragment_num: FragmentNumber_t::from(33),
             count: Count_t::from(12345)
         }))]
+    );
+
+    message_decoding_test!(
+        test_name = wireshark_ack_nack_with_info_src,
+        bytes = BytesMut::from(
+            &[
+                0x52, 0x54, 0x50, 0x53, 0x02, 0x01, 0x01, 0x0f, 0x01, 0x0f, 0xbb, 0x1d, 0xdf, 0x2b,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x01, 0x0c, 0x00, 0x01, 0x0f, 0xbb, 0x1d,
+                0xe6, 0x2b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x01, 0x18, 0x00, 0x00, 0x00,
+                0x04, 0xc7, 0x00, 0x00, 0x04, 0xc2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00
+            ][..]
+        ),
+        expected_notifications = [Ok(EntitySubmessage::AckNack(
+            AckNack {
+                reader_id: EntityId_t::ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER,
+                writer_id: EntityId_t::ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER,
+                reader_sn_state: SequenceNumberSet_t::new(SequenceNumber_t::from(0)),
+                count: Count_t::from(1)
+            },
+            SubmessageFlag { flags: 0b0000_0001 }
+        ))]
     );
 }
