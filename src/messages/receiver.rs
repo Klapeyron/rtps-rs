@@ -229,7 +229,6 @@ impl Decoder for MessageReceiver {
                                 vec![]
                             };
 
-                        dbg!(&bytes);
                         Ok(None)
                     }
                     SubmessageKind::INFO_TS => {
