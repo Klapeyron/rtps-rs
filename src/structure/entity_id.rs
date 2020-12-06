@@ -2,58 +2,58 @@ use speedy::{Context, Readable, Reader, Writable, Writer};
 
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
 pub struct EntityId_t {
-    entityKey: [u8; 3],
-    entityKind: u8,
+    entity_key: [u8; 3],
+    entity_kind: u8,
 }
 
 impl EntityId_t {
     pub const ENTITYID_UNKNOWN: EntityId_t = EntityId_t {
-        entityKey: [0x00; 3],
-        entityKind: 0x00,
+        entity_key: [0x00; 3],
+        entity_kind: 0x00,
     };
     pub const ENTITYID_PARTICIPANT: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x00, 0x01],
-        entityKind: 0xC1,
+        entity_key: [0x00, 0x00, 0x01],
+        entity_kind: 0xC1,
     };
     pub const ENTITYID_SEDP_BUILTIN_TOPIC_WRITER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x00, 0x02],
-        entityKind: 0xC2,
+        entity_key: [0x00, 0x00, 0x02],
+        entity_kind: 0xC2,
     };
     pub const ENTITYID_SEDP_BUILTIN_TOPIC_READER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x00, 0x02],
-        entityKind: 0xC7,
+        entity_key: [0x00, 0x00, 0x02],
+        entity_kind: 0xC7,
     };
     pub const ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x00, 0x03],
-        entityKind: 0xC2,
+        entity_key: [0x00, 0x00, 0x03],
+        entity_kind: 0xC2,
     };
     pub const ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x00, 0x03],
-        entityKind: 0xC7,
+        entity_key: [0x00, 0x00, 0x03],
+        entity_kind: 0xC7,
     };
     pub const ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x00, 0x04],
-        entityKind: 0xC2,
+        entity_key: [0x00, 0x00, 0x04],
+        entity_kind: 0xC2,
     };
     pub const ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x00, 0x04],
-        entityKind: 0xC7,
+        entity_key: [0x00, 0x00, 0x04],
+        entity_kind: 0xC7,
     };
     pub const ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x01, 0x00],
-        entityKind: 0xC2,
+        entity_key: [0x00, 0x01, 0x00],
+        entity_kind: 0xC2,
     };
     pub const ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x01, 0x00],
-        entityKind: 0xC7,
+        entity_key: [0x00, 0x01, 0x00],
+        entity_kind: 0xC7,
     };
     pub const ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x02, 0x00],
-        entityKind: 0xC2,
+        entity_key: [0x00, 0x02, 0x00],
+        entity_kind: 0xC2,
     };
     pub const ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER: EntityId_t = EntityId_t {
-        entityKey: [0x00, 0x02, 0x00],
-        entityKind: 0xC7,
+        entity_key: [0x00, 0x02, 0x00],
+        entity_kind: 0xC7,
     };
 }
 
@@ -66,11 +66,11 @@ impl Default for EntityId_t {
 impl<'a, C: Context> Readable<'a, C> for EntityId_t {
     #[inline]
     fn read_from<R: Reader<'a, C>>(reader: &mut R) -> Result<Self, C::Error> {
-        let entityKey = [reader.read_u8()?, reader.read_u8()?, reader.read_u8()?];
-        let entityKind = reader.read_u8()?;
+        let entity_key = [reader.read_u8()?, reader.read_u8()?, reader.read_u8()?];
+        let entity_kind = reader.read_u8()?;
         Ok(EntityId_t {
-            entityKey,
-            entityKind,
+            entity_key,
+            entity_kind,
         })
     }
 }
@@ -78,10 +78,10 @@ impl<'a, C: Context> Readable<'a, C> for EntityId_t {
 impl<C: Context> Writable<C> for EntityId_t {
     #[inline]
     fn write_to<T: ?Sized + Writer<C>>(&self, writer: &mut T) -> Result<(), C::Error> {
-        for elem in &self.entityKey {
+        for elem in &self.entity_key {
             writer.write_u8(*elem)?
         }
-        writer.write_u8(self.entityKind)
+        writer.write_u8(self.entity_kind)
     }
 }
 

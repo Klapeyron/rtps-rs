@@ -143,9 +143,9 @@ mod tests {
         let big_cache_change = CacheChange {
             kind: ChangeKind_t::ALIVE,
             writer_guid: GUID_t {
-                entityId: EntityId_t::ENTITYID_UNKNOWN,
-                guidPrefix: GuidPrefix_t {
-                    entityKey: [0x00; 12],
+                entity_id: EntityId_t::ENTITYID_UNKNOWN,
+                guid_prefix: GuidPrefix_t {
+                    entity_key: [0x00; 12],
                 },
             },
             instance_handle: InstanceHandle_t::default(),

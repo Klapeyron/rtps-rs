@@ -9,11 +9,11 @@
 pub struct ContentFilterProperty_t {
     /// Name of the Content-filtered Topic associated with the Reader.
     /// Must have non-zero length.
-    contentFilteredTopicName: String,
+    content_filtered_topic_name: String,
 
     /// Name of the Topic related to the Content-filtered Topic.
     /// Must have non-zero length.
-    relatedTopicName: String,
+    related_topic_name: String,
 
     /// Identifies the filter class this filter belongs to. RTPS can support
     /// multiple filter classes (SQL, regular expressions, custom filters,
@@ -22,14 +22,14 @@ pub struct ContentFilterProperty_t {
     /// “DDSSQL” Default filter class name if none specified.
     /// Matches the SQL filter specified by DDS, which must be available in all
     /// implementations.
-    filterClassName: String,
+    filter_class_name: String,
 
     /// The actual filter expression. Must be a valid expression for the filter
-    /// class specified using filterClassName.
+    /// class specified using filter_class_name.
     /// Must have non-zero length.
-    filterExpression: String,
+    filter_expression: String,
 
     /// Defines the value for each parameter in the filter expression.
     /// Can have zero length if the filter expression contains no parameters.
-    expressionParameters: Vec<String>,
+    extension_parameters: Vec<String>,
 }

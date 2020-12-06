@@ -2,19 +2,19 @@ use speedy::{Context, Readable, Reader, Writable, Writer};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct VendorId_t {
-    pub vendorId: [u8; 2],
+    pub vendor_id: [u8; 2],
 }
 
 impl VendorId_t {
     pub const VENDOR_UNKNOWN: VendorId_t = VendorId_t {
-        vendorId: [0x00; 2],
+        vendor_id: [0x00; 2],
     };
 }
 
 impl From<[u8; 2]> for VendorId_t {
     fn from(vendor_id: [u8; 2]) -> Self {
         VendorId_t {
-            vendorId: vendor_id,
+            vendor_id: vendor_id,
         }
     }
 }
@@ -29,8 +29,8 @@ impl<'a, C: Context> Readable<'a, C> for VendorId_t {
     #[inline]
     fn read_from<R: Reader<'a, C>>(reader: &mut R) -> Result<Self, C::Error> {
         let mut vendor_id = VendorId_t::default();
-        for i in 0..vendor_id.vendorId.len() {
-            vendor_id.vendorId[i] = reader.read_u8()?;
+        for i in 0..vendor_id.vendor_id.len() {
+            vendor_id.vendor_id[i] = reader.read_u8()?;
         }
         Ok(vendor_id)
     }
@@ -44,7 +44,7 @@ impl<'a, C: Context> Readable<'a, C> for VendorId_t {
 impl<C: Context> Writable<C> for VendorId_t {
     #[inline]
     fn write_to<T: ?Sized + Writer<C>>(&self, writer: &mut T) -> Result<(), C::Error> {
-        for elem in &self.vendorId {
+        for elem in &self.vendor_id {
             writer.write_u8(*elem)?
         }
         Ok(())

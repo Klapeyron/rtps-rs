@@ -21,11 +21,11 @@ pub struct ReaderLocator {
 
     /// Specifies whether the readers represented by this ReaderLocator
     /// expect inline QoS to be sent with every Data Message
-    expectsInlineQos: bool,
+    expects_inline_qos: bool,
 }
 
 impl ReaderLocator {
-    pub fn new(_locator: Locator_t, _expectsInlineQos: bool) -> Self {
+    pub fn new(_locator: Locator_t, _expects_inline_qos: bool) -> Self {
         unimplemented!();
     }
 

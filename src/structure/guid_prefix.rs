@@ -2,12 +2,12 @@ use speedy::{Context, Readable, Reader, Writable, Writer};
 
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
 pub struct GuidPrefix_t {
-    pub entityKey: [u8; 12],
+    pub entity_key: [u8; 12],
 }
 
 impl GuidPrefix_t {
     pub const GUIDPREFIX_UNKNOWN: GuidPrefix_t = GuidPrefix_t {
-        entityKey: [0x00; 12],
+        entity_key: [0x00; 12],
     };
 }
 
@@ -20,7 +20,7 @@ impl Default for GuidPrefix_t {
 impl From<[u8; 12]> for GuidPrefix_t {
     fn from(entity_key: [u8; 12]) -> Self {
         GuidPrefix_t {
-            entityKey: entity_key,
+            entity_key: entity_key,
         }
     }
 }
@@ -29,8 +29,8 @@ impl<'a, C: Context> Readable<'a, C> for GuidPrefix_t {
     #[inline]
     fn read_from<R: Reader<'a, C>>(reader: &mut R) -> Result<Self, C::Error> {
         let mut guid_prefix = GuidPrefix_t::default();
-        for i in 0..guid_prefix.entityKey.len() {
-            guid_prefix.entityKey[i] = reader.read_u8()?;
+        for i in 0..guid_prefix.entity_key.len() {
+            guid_prefix.entity_key[i] = reader.read_u8()?;
         }
         Ok(guid_prefix)
     }
@@ -44,7 +44,7 @@ impl<'a, C: Context> Readable<'a, C> for GuidPrefix_t {
 impl<C: Context> Writable<C> for GuidPrefix_t {
     #[inline]
     fn write_to<T: ?Sized + Writer<C>>(&self, writer: &mut T) -> Result<(), C::Error> {
-        for elem in &self.entityKey {
+        for elem in &self.entity_key {
             writer.write_u8(*elem)?
         }
         Ok(())
@@ -80,7 +80,7 @@ mod tests {
     {
         guid_prefix_endianness_insensitive,
         GuidPrefix_t {
-            entityKey: [0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
+            entity_key: [0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
                         0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB]
         },
         le = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
