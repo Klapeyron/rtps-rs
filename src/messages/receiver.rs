@@ -271,12 +271,12 @@ mod tests {
     use crate::structure::sequence_number::SequenceNumber_t;
     use crate::structure::sequence_number_set::SequenceNumberSet_t;
 
-    struct EntitySubmessageIterator {
-        message_receiver: MessageReceiver,
+    struct EntitySubmessageIterator<'a> {
+        message_receiver: &'a mut MessageReceiver,
         bytes: bytes::BytesMut,
     }
 
-    impl Iterator for EntitySubmessageIterator {
+    impl<'a> Iterator for EntitySubmessageIterator<'a> {
         type Item = Result<Option<EntitySubmessage>, std::io::Error>;
 
         fn next(&mut self) -> Option<Self::Item> {
@@ -314,14 +314,17 @@ mod tests {
 
     macro_rules! message_decoding_test {
         (test_name = $name:ident, bytes = $bytes:expr,
-        expected_notifications = [ $($expected_notification:expr),* ]) => {
+        expected_notifications = [ $($expected_notification:expr),* ]
+        $(, receiver_state = $receiver:expr)?
+        ) => {
             mod $name {
                 use super::*;
 
                 #[test]
                 fn test_submessage_decoding() {
+                    let mut message_receiver = MessageReceiver::new(LocatorKind_t::LOCATOR_KIND_INVALID);
                     let messages_iterator = EntitySubmessageIterator {
-                        message_receiver: MessageReceiver::new(LocatorKind_t::LOCATOR_KIND_INVALID),
+                        message_receiver: &mut message_receiver,
                         bytes: $bytes
                     };
 
@@ -353,6 +356,8 @@ mod tests {
                         // we do not care what happends after that :)
                         .take(expected_notifications.len());
                     assert!(decoder_output.eq(expected_notifications));
+
+                    $(assert_eq!($receiver, message_receiver.receiver);)?
                 }
             }
         }
