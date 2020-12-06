@@ -4,7 +4,7 @@ use speedy::{Context, Readable, Reader, Writable, Writer};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, PartialEq)]
-pub struct BitSetRef(BitSet);
+pub struct BitSetRef(BitSet<u32>);
 
 impl BitSetRef {
     pub fn new() -> BitSetRef {
@@ -34,13 +34,16 @@ impl<'a, C: Context> Readable<'a, C> for BitSetRef {
     #[inline]
     fn read_from<R: Reader<'a, C>>(reader: &mut R) -> Result<Self, C::Error> {
         let number_of_bits = reader.read_u32()?;
+        let number_of_bytes = (number_of_bits + 31) / 32;
+
         let mut bit_vec = BitVec::with_capacity(number_of_bits as usize);
         unsafe {
             let inner = bit_vec.storage_mut();
-            for _ in 0..(number_of_bits / 32) {
+            for _ in 0..number_of_bytes {
                 inner.push(reader.read_u32()?);
             }
         }
+
         Ok(BitSetRef(BitSet::from_bit_vec(bit_vec)))
     }
 
