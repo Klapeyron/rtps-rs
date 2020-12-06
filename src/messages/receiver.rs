@@ -271,6 +271,7 @@ mod tests {
 
     use super::*;
     use crate::messages::fragment_number::FragmentNumber_t;
+    use crate::messages::fragment_number_set::FragmentNumberSet_t;
     use crate::messages::header::Header;
     use crate::messages::submessage_flag::SubmessageFlag;
     use crate::structure::count::Count_t;
@@ -297,14 +298,14 @@ mod tests {
                 let mut serialized_input: Vec<u8> = $header.write_to_vec_with_ctx(Endianness::NATIVE).unwrap();
                     $(
                         let mut submessage_header = $submessage_header;
-                        let mut submessage_content: Vec<u8> = vec![];
+                        let mut _submessage_content: Vec<u8> = vec![];
                         $(
                             let serialized_submessage =
                                 $entity.write_to_vec_with_ctx(submessage_header.flags.endianness_flag()).unwrap();
-                            submessage_content.extend(serialized_submessage.into_iter());
+                            _submessage_content.extend(serialized_submessage.into_iter());
                         )*
                         let provided_submessage_length = submessage_header.submessage_length;
-                        let calculated_submessage_length = submessage_content.len() as u16;
+                        let calculated_submessage_length = _submessage_content.len() as u16;
                         assert_eq!(
                             provided_submessage_length, calculated_submessage_length,
                             "Try to replace provided submessage_length {} with {}.",
@@ -313,7 +314,7 @@ mod tests {
                         submessage_header.submessage_length = calculated_submessage_length;
                         let submessage_header = submessage_header.write_to_vec_with_ctx(submessage_header.flags.endianness_flag()).unwrap();
                         serialized_input.extend(submessage_header.into_iter());
-                        serialized_input.extend(submessage_content.into_iter());
+                        serialized_input.extend(_submessage_content.into_iter());
                     )+
                 bytes::BytesMut::from(&serialized_input[..])
             }};
@@ -549,6 +550,41 @@ mod tests {
             ],
             ..Receiver::new(LocatorKind_t::LOCATOR_KIND_INVALID)
         }
+    );
+
+    message_decoding_test!(
+        test_name = single_nack_frag_with_pad,
+        bytes = encode_message!(
+            header = Header::new(GuidPrefix_t::GUIDPREFIX_UNKNOWN),
+            [
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::PAD,
+                    flags: SubmessageFlag { flags: 0b0000_0000 },
+                    submessage_length: 0,
+                },
+                submessage_entities = [],
+                submessage_header = SubmessageHeader {
+                    submessage_id: SubmessageKind::NACK_FRAG,
+                    flags: SubmessageFlag { flags: 0b0000_0000 },
+                    submessage_length: 28,
+                },
+                submessage_entities = [
+                    EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
+                    EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
+                    SequenceNumber_t::from(69),
+                    FragmentNumberSet_t::new(FragmentNumber_t::from(96)),
+                    Count_t::from(54321)
+                ],
+            ]
+        ),
+        expected_notifications = [Ok(EntitySubmessage::NackFrag(NackFrag {
+            reader_id: EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER,
+            writer_id: EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
+            writer_sn: SequenceNumber_t::from(69),
+            fragment_number_state: FragmentNumberSet_t::new(FragmentNumber_t::from(96)),
+            count: Count_t::from(54321)
+        }))],
+        receiver_state = Receiver::new(LocatorKind_t::LOCATOR_KIND_INVALID)
     );
 
     message_decoding_test!(
