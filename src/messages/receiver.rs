@@ -32,6 +32,29 @@ pub struct Receiver {
     pub timestamp: Time_t,
 }
 
+impl Receiver {
+    pub fn new(locator_kind: LocatorKind_t) -> Self {
+        Receiver {
+            source_version: ProtocolVersion_t::PROTOCOLVERSION,
+            source_vendor_id: VendorId_t::VENDOR_UNKNOWN,
+            source_guid_prefix: GuidPrefix_t::GUIDPREFIX_UNKNOWN,
+            dest_guid_prefix: GuidPrefix_t::GUIDPREFIX_UNKNOWN,
+            unicast_reply_locator_list: vec![Locator_t {
+                kind: locator_kind,
+                address: Locator_t::LOCATOR_ADDRESS_INVALID,
+                port: Locator_t::LOCATOR_PORT_INVALID,
+            }],
+            multicast_reply_locator_list: vec![Locator_t {
+                kind: locator_kind,
+                address: Locator_t::LOCATOR_ADDRESS_INVALID,
+                port: Locator_t::LOCATOR_PORT_INVALID,
+            }],
+            have_timestamp: false,
+            timestamp: Time_t::TIME_INVALID,
+        }
+    }
+}
+
 enum DeserializationState {
     ReadingHeader,
     ReadingSubmessage,
@@ -45,24 +68,7 @@ pub struct MessageReceiver {
 impl MessageReceiver {
     pub fn new(locator_kind: LocatorKind_t) -> Self {
         MessageReceiver {
-            receiver: Receiver {
-                source_version: ProtocolVersion_t::PROTOCOLVERSION,
-                source_vendor_id: VendorId_t::VENDOR_UNKNOWN,
-                source_guid_prefix: GuidPrefix_t::GUIDPREFIX_UNKNOWN,
-                dest_guid_prefix: GuidPrefix_t::GUIDPREFIX_UNKNOWN,
-                unicast_reply_locator_list: vec![Locator_t {
-                    kind: locator_kind,
-                    address: Locator_t::LOCATOR_ADDRESS_INVALID,
-                    port: Locator_t::LOCATOR_PORT_INVALID,
-                }],
-                multicast_reply_locator_list: vec![Locator_t {
-                    kind: locator_kind,
-                    address: Locator_t::LOCATOR_ADDRESS_INVALID,
-                    port: Locator_t::LOCATOR_PORT_INVALID,
-                }],
-                have_timestamp: false,
-                timestamp: Time_t::TIME_INVALID,
-            },
+            receiver: Receiver::new(locator_kind),
             state: DeserializationState::ReadingHeader,
         }
     }
@@ -208,7 +214,7 @@ impl Decoder for MessageReceiver {
                         self.receiver.unicast_reply_locator_list = unicast_locator_list?;
 
                         use crate::bytes::Buf;
-                        let mut bytes = bytes.split_to(read_bytes);
+                        let mut bytes = bytes.split_off(read_bytes);
 
                         self.receiver.multicast_reply_locator_list =
                             if submessage_header.flags.is_flag_set(0x02) {
@@ -223,6 +229,7 @@ impl Decoder for MessageReceiver {
                                 vec![]
                             };
 
+                        dbg!(&bytes);
                         Ok(None)
                     }
                     SubmessageKind::INFO_TS => {
@@ -356,8 +363,7 @@ mod tests {
                         // we do not care what happends after that :)
                         .take(expected_notifications.len());
                     assert!(decoder_output.eq(expected_notifications));
-
-                    $(assert_eq!($receiver, message_receiver.receiver);)?
+                    $(pretty_assertions::assert_eq!(message_receiver.receiver, $receiver);)?
                 }
             }
         }
@@ -395,7 +401,12 @@ mod tests {
                 count: Count_t::from(1)
             },
             SubmessageFlag { flags: 0b0000_0000 }
-        ))]
+        ))],
+        receiver_state = Receiver {
+            have_timestamp: true,
+            timestamp: Time_t::TIME_INFINITE,
+            ..Receiver::new(LocatorKind_t::LOCATOR_KIND_INVALID)
+        }
     );
 
     message_decoding_test!(
@@ -431,7 +442,16 @@ mod tests {
             writer_id: EntityId_t::ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER,
             gap_start: SequenceNumber_t::from(42),
             gap_list: SequenceNumberSet_t::new(SequenceNumber_t::from(0b10110100))
-        }))]
+        }))],
+        receiver_state = Receiver {
+            dest_guid_prefix: GuidPrefix_t::GUIDPREFIX_UNKNOWN,
+            source_version: ProtocolVersion_t::PROTOCOLVERSION,
+            source_vendor_id: VendorId_t::VENDOR_UNKNOWN,
+            unicast_reply_locator_list: vec![Locator_t::LOCATOR_INVALID],
+            multicast_reply_locator_list: vec![Locator_t::LOCATOR_INVALID],
+            have_timestamp: false,
+            ..Receiver::new(LocatorKind_t::LOCATOR_KIND_INVALID)
+        }
     );
 
     message_decoding_test!(
@@ -444,7 +464,7 @@ mod tests {
                     flags: SubmessageFlag { flags: 0b0000_0001 },
                     submessage_length: 12,
                 },
-                submessage_entities = [GuidPrefix_t::GUIDPREFIX_UNKNOWN],
+                submessage_entities = [GuidPrefix_t::from([0x42; 12])],
                 submessage_header = SubmessageHeader {
                     submessage_id: SubmessageKind::HEARTBEAT,
                     flags: SubmessageFlag { flags: 0b0000_0001 },
@@ -468,7 +488,11 @@ mod tests {
                 count: Count_t::from(99)
             },
             SubmessageFlag { flags: 0b0000_0001 }
-        ))]
+        ))],
+        receiver_state = Receiver {
+            dest_guid_prefix: GuidPrefix_t::from([0x42; 12]),
+            ..Receiver::new(LocatorKind_t::LOCATOR_KIND_INVALID)
+        }
     );
 
     message_decoding_test!(
@@ -512,7 +536,19 @@ mod tests {
             writer_sn: SequenceNumber_t::from(36),
             last_fragment_num: FragmentNumber_t::from(33),
             count: Count_t::from(12345)
-        }))]
+        }))],
+        receiver_state = Receiver {
+            unicast_reply_locator_list: vec![Locator_t::LOCATOR_INVALID],
+            multicast_reply_locator_list: vec![
+                Locator_t::from("127.0.0.1:8080".parse::<std::net::SocketAddr>().unwrap()),
+                Locator_t::from(
+                    "[2001:db8::1]:8080"
+                        .parse::<std::net::SocketAddr>()
+                        .unwrap()
+                )
+            ],
+            ..Receiver::new(LocatorKind_t::LOCATOR_KIND_INVALID)
+        }
     );
 
     message_decoding_test!(
@@ -534,6 +570,17 @@ mod tests {
                 count: Count_t::from(1)
             },
             SubmessageFlag { flags: 0b0000_0001 }
-        ))]
+        ))],
+        receiver_state = Receiver {
+            source_guid_prefix: GuidPrefix_t::from([
+                0x01, 0x0f, 0xbb, 0x1d, 0xdf, 0x2b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+            ]),
+            dest_guid_prefix: GuidPrefix_t::from([
+                0x01, 0x0f, 0xbb, 0x1d, 0xe6, 0x2b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+            ]),
+            source_version: ProtocolVersion_t::PROTOCOLVERSION_2_1,
+            source_vendor_id: VendorId_t::from([0x01, 0x0F]),
+            ..Receiver::new(LocatorKind_t::LOCATOR_KIND_INVALID)
+        }
     );
 }

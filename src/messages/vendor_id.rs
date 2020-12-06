@@ -11,6 +11,14 @@ impl VendorId_t {
     };
 }
 
+impl From<[u8; 2]> for VendorId_t {
+    fn from(vendor_id: [u8; 2]) -> Self {
+        VendorId_t {
+            vendorId: vendor_id,
+        }
+    }
+}
+
 impl Default for VendorId_t {
     fn default() -> Self {
         VendorId_t::VENDOR_UNKNOWN

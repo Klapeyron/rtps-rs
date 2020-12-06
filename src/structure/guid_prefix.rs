@@ -17,6 +17,14 @@ impl Default for GuidPrefix_t {
     }
 }
 
+impl From<[u8; 12]> for GuidPrefix_t {
+    fn from(entity_key: [u8; 12]) -> Self {
+        GuidPrefix_t {
+            entityKey: entity_key,
+        }
+    }
+}
+
 impl<'a, C: Context> Readable<'a, C> for GuidPrefix_t {
     #[inline]
     fn read_from<R: Reader<'a, C>>(reader: &mut R) -> Result<Self, C::Error> {
