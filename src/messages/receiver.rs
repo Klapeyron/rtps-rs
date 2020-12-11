@@ -11,6 +11,7 @@ use crate::messages::vendor_id::VendorId_t;
 use crate::messages::{ack_nack::AckNack, gap::Gap, header::Header, info_source::InfoSource};
 use crate::structure::guid_prefix::GuidPrefix_t;
 use crate::structure::locator::{LocatorKind_t, LocatorList_t, Locator_t};
+use crate::structure::locator_udp_v4::LocatorUDPv4_t;
 use crate::structure::time::Time_t;
 
 use log::info;
@@ -225,6 +226,32 @@ impl Decoder for MessageReceiver {
                                     );
                                 bytes.advance(read_bytes);
                                 multicast_locator_list?
+                            } else {
+                                vec![]
+                            };
+
+                        Ok(None)
+                    }
+                    SubmessageKind::INFO_REPLAY_IP4 => {
+                        let mut bytes = bytes.split_to(submessage_header.submessage_length.into());
+                        let unicast_locator = LocatorUDPv4_t::read_from_buffer_with_ctx(
+                            submessage_header.flags.endianness_flag(),
+                            &bytes.split_to(
+                                <LocatorUDPv4_t as Readable<Endianness>>::minimum_bytes_needed(),
+                            ),
+                        )?;
+                        self.receiver.unicast_reply_locator_list = vec![unicast_locator.into()];
+
+                        self.receiver.multicast_reply_locator_list =
+                            if submessage_header.flags.is_flag_set(0x02) {
+                                let multicast_locator = LocatorUDPv4_t::read_from_buffer_with_ctx(
+                                submessage_header.flags.endianness_flag(),
+                                &bytes.split_to(
+                                    <LocatorUDPv4_t as Readable<Endianness>>::minimum_bytes_needed(
+                                    ),
+                                ),
+                            )?;
+                                vec![multicast_locator.into()]
                             } else {
                                 vec![]
                             };
