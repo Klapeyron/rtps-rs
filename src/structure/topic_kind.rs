@@ -1,13 +1,10 @@
 use speedy::{Readable, Writable};
 
 #[derive(Debug, PartialEq, Eq, Readable, Writable)]
-pub struct TopicKind_t {
-    value: u32,
-}
-
-impl TopicKind_t {
-    pub const NO_KEY: TopicKind_t = TopicKind_t { value: 1 };
-    pub const WITH_KEY: TopicKind_t = TopicKind_t { value: 2 };
+#[speedy(tag_type = u32)]
+pub enum TopicKind_t {
+    NO_KEY = 1,
+    WITH_KEY = 2,
 }
 
 #[cfg(test)]
@@ -16,13 +13,13 @@ mod tests {
 
     serialization_test!(type = TopicKind_t,
     {
-        topic_kind_no_key,
+        topic_kind_t_no_key,
         TopicKind_t::NO_KEY,
         le = [0x01, 0x00, 0x00, 0x00],
         be = [0x00, 0x00, 0x00, 0x01]
     },
     {
-        topic_kind_with_key,
+        topic_kind_t_with_key,
         TopicKind_t::WITH_KEY,
         le = [0x02, 0x00, 0x00, 0x00],
         be = [0x00, 0x00, 0x00, 0x02]
