@@ -3,10 +3,7 @@ use num_traits::{CheckedAdd, CheckedSub, FromPrimitive, NumCast, ToPrimitive};
 use speedy::{Readable, Writable};
 
 #[derive(Debug, PartialEq, Readable, Writable)]
-pub struct RangedBitSet<B>
-where
-    B: CheckedAdd + CheckedSub + ToPrimitive + FromPrimitive,
-{
+pub struct RangedBitSet<B> {
     base: B,
     set: BitSetRef,
 }
@@ -37,10 +34,7 @@ where
     }
 }
 
-pub struct RangedBitSetIntoIter<B>
-where
-    B: CheckedAdd + CheckedSub + ToPrimitive + FromPrimitive,
-{
+pub struct RangedBitSetIntoIter<B> {
     base: B,
     iter: std::iter::Enumerate<bit_vec::IntoIter>,
 }
