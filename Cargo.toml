@@ -1,7 +1,7 @@
 [package]
 name = "rtps-rs"
 version = "0.1.2"
-authors = ["Klapeyron <tomasz.bartos@protonmail.com>"]
+authors = ["Klapeyron <Klapeyron@users.noreply.github.com>"]
 description = "Real Time Publish Subscribe protocol"
 repository = "https://github.com/Klapeyron/rtps-rs"
 homepage = "https://github.com/Klapeyron/rtps-rs"
@@ -22,4 +22,4 @@ num-derive = "0.3"
 err-derive = "0.3"
 
 [dev-dependencies]
-pretty_assertions = "0.6.1"
+pretty_assertions = "0.7.2"
