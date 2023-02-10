@@ -12,7 +12,7 @@ edition = "2018"
 
 [dependencies]
 bytes = "1.0.0"
-tokio-util = { version = "0.6.0", features = ["codec"] }
+tokio-util = { version = "0.7.6", features = ["codec"] }
 bit-set = "0.5.2"
 bit-vec = "0.6.3"
 speedy = "0.7.1"
