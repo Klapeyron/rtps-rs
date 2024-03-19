@@ -18,7 +18,7 @@ bit-vec = "0.6.3"
 speedy = "0.7.1"
 log = "0.4.11"
 num-traits = "0.2"
-num-derive = "0.3"
+num-derive = "0.4"
 err-derive = "0.3"
 
 [dev-dependencies]
